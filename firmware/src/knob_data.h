@@ -3,12 +3,12 @@
 #include <Arduino.h>
 
 struct KnobConfig {
-    int32_t num_positions;
-    int32_t position;
-    float position_width_radians;
-    float detent_strength_unit;
-    float endstop_strength_unit;
-    float snap_point;
+    int32_t num_positions;          //  位置数量
+    int32_t position;               //  起始位置
+    float position_width_radians;   //  detent的步长，rad单位
+    float detent_strength_unit;     //  detent强度
+    float endstop_strength_unit;    //  TODO
+    float snap_point;               //  TODO what is this
     char descriptor[50];
 };
 

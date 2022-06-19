@@ -332,7 +332,14 @@ void MotorTask::run() {
                     break;
                 }
                 case CommandType::HAPTIC: {
-                    float strength = command.data.haptic.press ? 5 : 1.5;
+                    // if(command.data.haptic.press){
+                    //     log_w("press");
+                    // }
+                    // else{
+                    //     log_w("weak press");
+                    // }
+                    //解释：按下会传true,抬起来的时候是false,对应了机械开关按下更强的震动与松开稍弱的震动。
+                    float strength = command.data.haptic.press ? 5 : 1.5; 
                     motor.move(strength);
                     for (uint8_t i = 0; i < 3; i++) {
                         motor.loopFOC();
@@ -350,11 +357,13 @@ void MotorTask::run() {
             }
         }
 
+        //电机的 指数加权平均 速度
         idle_check_velocity_ewma = motor.shaft_velocity * IDLE_VELOCITY_EWMA_ALPHA + idle_check_velocity_ewma * (1 - IDLE_VELOCITY_EWMA_ALPHA);
         if (fabsf(idle_check_velocity_ewma) > IDLE_VELOCITY_RAD_PER_SEC) {
             last_idle_start = 0;
         } else {
             if (last_idle_start == 0) {
+                // 记录空闲的开始时间
                 last_idle_start = millis();
             }
         }
@@ -362,12 +371,13 @@ void MotorTask::run() {
         // If we are not moving and we're close to the center (but not exactly there), slowly adjust the centerpoint to match the current position
         if (last_idle_start > 0 && millis() - last_idle_start > IDLE_CORRECTION_DELAY_MILLIS && fabsf(motor.shaft_angle - current_detent_center) < IDLE_CORRECTION_MAX_ANGLE_RAD) {
             current_detent_center = motor.shaft_angle * IDLE_CORRECTION_RATE_ALPHA + current_detent_center * (1 - IDLE_CORRECTION_RATE_ALPHA);
+            //Note TODO when will whis happen?
             // if (millis() - last_debug > 100) {
-            //     last_debug = millis();
-            //     Serial.print("Moving detent center. ");
-            //     Serial.print(current_detent_center);
-            //     Serial.print(" ");
-            //     Serial.println(motor.shaft_angle);
+                last_debug = millis();
+                Serial.print("Moving detent center. ");
+                Serial.print(current_detent_center);
+                Serial.print(" ");
+                Serial.println(motor.shaft_angle);
             // }
         }
 
