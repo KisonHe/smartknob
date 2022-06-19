@@ -310,13 +310,15 @@ void MotorTask::run() {
                     #if SK_INVERT_ROTATION
                         current_detent_center = -motor.shaft_angle;
                     #endif
-
+                    //  根据detent宽度调整PID的D参数，防止D参数导致震动
                     // Update derivative factor of torque controller based on detent width.
                     // If the D factor is large on coarse detents, the motor ends up making noise because the P&D factors amplify the noise from the sensor.
+                    //  分段线性函数调整，更小的detent宽度会令D参数更大。小的detent需要非零D来抖一下产生那个效果，P参数因为误差太小没有那个效果
                     // This is a piecewise linear function so that fine detents (small width) get a higher D factor and coarse detents get a small D factor.
                     // Fine detents need a nonzero D factor to artificially create "clicks" each time a new value is reached (the P factor is small
                     // for fine detents due to the smaller angular errors, and the existing P factor doesn't work well for very small angle changes (easy to
                     // get runaway due to sensor noise & lag)).
+                    //  或者说直接进行一次 HAPTIC ，可以试一试TODO
                     // TODO: consider eliminating this D factor entirely and just "play" a hardcoded haptic "click" (e.g. a quick burst of torque in each
                     // direction) whenever the position changes when the detent width is too small for the P factor to work well.
                     const float derivative_lower_strength = config.detent_strength_unit * 0.08;
@@ -332,12 +334,6 @@ void MotorTask::run() {
                     break;
                 }
                 case CommandType::HAPTIC: {
-                    // if(command.data.haptic.press){
-                    //     log_w("press");
-                    // }
-                    // else{
-                    //     log_w("weak press");
-                    // }
                     //解释：按下会传true,抬起来的时候是false,对应了机械开关按下更强的震动与松开稍弱的震动。
                     float strength = command.data.haptic.press ? 5 : 1.5; 
                     motor.move(strength);
@@ -367,7 +363,7 @@ void MotorTask::run() {
                 last_idle_start = millis();
             }
         }
-
+        //  如果空闲，但是还没在detent中心，就缓慢调整软位置到中心，（虽然我从来没有跑到过这个）
         // If we are not moving and we're close to the center (but not exactly there), slowly adjust the centerpoint to match the current position
         if (last_idle_start > 0 && millis() - last_idle_start > IDLE_CORRECTION_DELAY_MILLIS && fabsf(motor.shaft_angle - current_detent_center) < IDLE_CORRECTION_MAX_ANGLE_RAD) {
             current_detent_center = motor.shaft_angle * IDLE_CORRECTION_RATE_ALPHA + current_detent_center * (1 - IDLE_CORRECTION_RATE_ALPHA);
