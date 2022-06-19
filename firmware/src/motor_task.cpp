@@ -97,15 +97,15 @@ void MotorTask::run() {
 
     bool calibrate = false;
 
-    Serial.println("Press Y to run calibration");
-    uint32_t t = millis();
-    while (millis() - t < 3000) {
-        if (Serial.read() == 'Y') {
-            calibrate = true;
-            break;
-        }
-        delay(10);
-    }
+    // Serial.println("Press Y to run calibration");
+    // uint32_t t = millis();
+    // while (millis() - t < 3000) {
+    //     if (Serial.read() == 'Y') {
+    //         calibrate = true;
+    //         break;
+    //     }
+    //     delay(10);
+    // }
     if (calibrate) {
         motor.controller = MotionControlType::angle_openloop;
         motor.pole_pairs = 1;
@@ -324,7 +324,7 @@ void MotorTask::run() {
                     const float derivative_position_width_lower = radians(3);
                     const float derivative_position_width_upper = radians(8);
                     const float raw = derivative_lower_strength + (derivative_upper_strength - derivative_lower_strength)/(derivative_position_width_upper - derivative_position_width_lower)*(config.position_width_radians - derivative_position_width_lower);
-                    motor.PID_velocity.D = CLAMP(
+                    motor.PID_velocity.D = CLAMP(   //  CLAMP,限制参数到区间
                         raw,
                         min(derivative_lower_strength, derivative_upper_strength),
                         max(derivative_lower_strength, derivative_upper_strength)
@@ -380,11 +380,12 @@ void MotorTask::run() {
                 Serial.println(motor.shaft_angle);
             // }
         }
-
+        //  当前角度减去detent中心角度
         float angle_to_detent_center = motor.shaft_angle - current_detent_center;
         #if SK_INVERT_ROTATION
             angle_to_detent_center = -motor.shaft_angle - current_detent_center;
         #endif
+        //  判断是否应该切换detent
         if (angle_to_detent_center > config.position_width_radians * config.snap_point && (config.num_positions <= 0 || config.position > 0)) {
             current_detent_center += config.position_width_radians;
             angle_to_detent_center -= config.position_width_radians;
@@ -394,19 +395,20 @@ void MotorTask::run() {
             angle_to_detent_center += config.position_width_radians;
             config.position++;
         }
-
-        float dead_zone_adjustment = CLAMP(
+        //  死区调整，如果大于死区取到对应数，小于死区取到自身反符号值，令电机扭矩变为0
+        float dead_zone_adjustment = CLAMP( //  CLAMP,限制参数到区间
             angle_to_detent_center,
             fmaxf(-config.position_width_radians*DEAD_ZONE_DETENT_PERCENT, -DEAD_ZONE_RAD),
             fminf(config.position_width_radians*DEAD_ZONE_DETENT_PERCENT, DEAD_ZONE_RAD));
 
         bool out_of_bounds = config.num_positions > 0 && ((angle_to_detent_center > 0 && config.position == 0) || (angle_to_detent_center < 0 && config.position == config.num_positions - 1));
         motor.PID_velocity.limit = 10; //out_of_bounds ? 10 : 3;
-        motor.PID_velocity.P = out_of_bounds ? config.endstop_strength_unit * 4 : config.detent_strength_unit * 4;
+        motor.PID_velocity.P = out_of_bounds ? config.endstop_strength_unit * 4 : config.detent_strength_unit * 4;  //  根据config里的强度调整P值
 
 
 
         if (fabsf(motor.shaft_velocity) > 60) {
+            // 速度过高停止施加力矩，防止正反馈疯电机
             // Don't apply torque if velocity is too high (helps avoid positive feedback loop/runaway)
             motor.move(0);
         } else {
@@ -418,7 +420,7 @@ void MotorTask::run() {
         }
 
         if (millis() - last_publish > 10) {
-            publish({
+            publish({   //  这个{}变量生命周期确实直接过了，但是freertos入队的时候会拷贝，传入不是指针所以OK
                 .current_position = config.position,
                 .sub_position_unit = -angle_to_detent_center / config.position_width_radians,
                 .config = config,

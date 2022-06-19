@@ -114,13 +114,13 @@ void DisplayTask::run() {
         if (xQueueReceive(knob_state_queue_, &state, portMAX_DELAY) == pdFALSE) {
           continue;
         }
-
+        //  填充黑色
         spr_.fillSprite(TFT_BLACK);
         if (state.config.num_positions > 1) {
           int32_t height = state.current_position * TFT_HEIGHT / (state.config.num_positions - 1);
           spr_.fillRect(0, TFT_HEIGHT - height, TFT_WIDTH, height, FILL_COLOR);
         }
-
+        // 字体&打印描述
         spr_.setFreeFont(&Roboto_Light_60);
         spr_.drawString(String() + state.current_position, TFT_WIDTH / 2, TFT_HEIGHT / 2 - VALUE_OFFSET, 1);
         spr_.setFreeFont(&DESCRIPTION_FONT);
@@ -142,20 +142,22 @@ void DisplayTask::run() {
 
         float left_bound = PI / 2;
 
-        if (state.config.num_positions > 0) {
+        //  画左右的那个边界线
+        if (state.config.num_positions > 0) {// 如果不是Unbounded
           float range_radians = (state.config.num_positions - 1) * state.config.position_width_radians;
           left_bound = PI / 2 + range_radians / 2;
           float right_bound = PI / 2 - range_radians / 2;
           spr_.drawLine(TFT_WIDTH/2 + RADIUS * cosf(left_bound), TFT_HEIGHT/2 - RADIUS * sinf(left_bound), TFT_WIDTH/2 + (RADIUS - 10) * cosf(left_bound), TFT_HEIGHT/2 - (RADIUS - 10) * sinf(left_bound), TFT_WHITE);
           spr_.drawLine(TFT_WIDTH/2 + RADIUS * cosf(right_bound), TFT_HEIGHT/2 - RADIUS * sinf(right_bound), TFT_WIDTH/2 + (RADIUS - 10) * cosf(right_bound), TFT_HEIGHT/2 - (RADIUS - 10) * sinf(right_bound), TFT_WHITE);
         }
-        if (DRAW_ARC) {
+        if (DRAW_ARC) { //  原版关闭，外侧画一个圆。焯，中景园这个屏幕的圆形可显示部分是有偏差的啊
           spr_.drawCircle(TFT_WIDTH/2, TFT_HEIGHT/2, RADIUS, TFT_DARKGREY);
         }
-
+        //  限位后的软位置？
         float adjusted_sub_position = state.sub_position_unit * state.config.position_width_radians;
-        if (state.config.num_positions > 0) {
-          if (state.current_position == 0 && state.sub_position_unit < 0) {
+        if (state.config.num_positions > 0) { // 如果不是Unbounded
+        // 实际位置小于下限，超过限位。对超过的位置做对数处理，下方超过上线同理。都是为了GUI做的处理
+          if (state.current_position == 0 && state.sub_position_unit < 0) { 
             adjusted_sub_position = -logf(1 - state.sub_position_unit  * state.config.position_width_radians / 5 / PI * 180) * 5 * PI / 180;
           } else if (state.current_position == state.config.num_positions - 1 && state.sub_position_unit > 0) {
             adjusted_sub_position = logf(1 + state.sub_position_unit  * state.config.position_width_radians / 5 / PI * 180)  * 5 * PI / 180;
