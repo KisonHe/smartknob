@@ -83,6 +83,7 @@ void MT6701Sensor::init() {
 
 float MT6701Sensor::getSensorAngle() {
     uint32_t now = micros();
+    // static int cnt = 0;
     if (now - last_update_ > 100) {
       
       esp_err_t ret=spi_device_polling_transmit(spi_device_, &spi_transaction_);
@@ -97,6 +98,9 @@ float MT6701Sensor::getSensorAngle() {
 
       uint8_t received_crc = spi_32 & 0x3F;
       uint8_t calculated_crc = CRC6_43_18bit(spi_32 >> 6);
+
+      // if (cnt++%20==0)
+      // {Serial.print("field_status:");Serial.println(field_status);}
       
       if (received_crc == calculated_crc) {
         float new_angle = (float)angle_spi * 2 * PI / 16384;

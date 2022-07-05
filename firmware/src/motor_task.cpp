@@ -53,7 +53,8 @@ void MotorTask::run() {
     // float zero_electric_offset = -0.8; // handheld 2
     // float zero_electric_offset = 2.93; //0.15; // 17mm test
     // float zero_electric_offset = 0.66; // 15mm handheld
-    float zero_electric_offset = 7.34;
+    float zero_electric_offset = 7;
+    // float zero_electric_offset = 2.19;
     Direction foc_direction = Direction::CW;
     motor.pole_pairs = 7;
 
@@ -86,7 +87,7 @@ void MotorTask::run() {
     motor.PID_velocity.limit = 10;
 
 
-    // motor.useMonitoring(Serial);
+    motor.useMonitoring(Serial);
 
     motor.init();
 
@@ -99,6 +100,7 @@ void MotorTask::run() {
 
     // Serial.println("Press Y to run calibration");
     // uint32_t t = millis();
+    // calibrate = true;
     // while (millis() - t < 3000) {
     //     if (Serial.read() == 'Y') {
     //         calibrate = true;
@@ -318,10 +320,10 @@ void MotorTask::run() {
                     // Fine detents need a nonzero D factor to artificially create "clicks" each time a new value is reached (the P factor is small
                     // for fine detents due to the smaller angular errors, and the existing P factor doesn't work well for very small angle changes (easy to
                     // get runaway due to sensor noise & lag)).
-                    //  或者说直接进行一次 HAPTIC ，可以试一试TODO
+                    //  或者说直接进行一次 HAPTIC ，可以试一试TODO --> Fine values with detents, 如果你切换的太快，D效果基本没有只剩下P了，就没有那种很爽的阻尼感了
                     // TODO: consider eliminating this D factor entirely and just "play" a hardcoded haptic "click" (e.g. a quick burst of torque in each
                     // direction) whenever the position changes when the detent width is too small for the P factor to work well.
-                    const float derivative_lower_strength = config.detent_strength_unit * 0.08;
+                    const float derivative_lower_strength = config.detent_strength_unit * 0.12;
                     const float derivative_upper_strength = config.detent_strength_unit * 0.02;
                     const float derivative_position_width_lower = radians(3);
                     const float derivative_position_width_upper = radians(8);
@@ -425,6 +427,9 @@ void MotorTask::run() {
         }
 
         motor.monitor();
+        // Serial.printf("%.4f",encoder.getSensorAngle());
+        Serial.println(encoder.getSensorAngle());
+        
         // command.run();
 
         delay(1);

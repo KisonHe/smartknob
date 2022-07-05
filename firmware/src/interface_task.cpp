@@ -195,10 +195,10 @@ void InterfaceTask::run() {
             float lux = veml.readLux();
             lux_avg = lux * LUX_ALPHA + lux_avg * (1 - LUX_ALPHA);
             static uint32_t last_als;
-            if (millis() - last_als > 1000) {
-                Serial.print("millilux: "); Serial.println(lux*1000);
-                last_als = millis();
-            }
+            // if (millis() - last_als > 1000) {
+            //     Serial.print("millilux: "); Serial.println(lux*1000);
+            //     last_als = millis();
+            // }
         #endif
 
         #if SK_STRAIN
